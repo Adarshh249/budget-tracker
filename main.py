@@ -113,3 +113,7 @@ def get_insights(db: Session = Depends(get_db)):
         insights.append(f"{max_category} takes {percentage:.2f}% of your spending")
 
     return {"insights": insights}
+
+@app.get("/")
+def home():
+    return {"message": "Budget Tracker API is running"}
