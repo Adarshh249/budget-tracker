@@ -1,13 +1,14 @@
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base
 import models
 from pydantic import BaseModel
 
-# Create FastAPI app
+# Create app
 app = FastAPI()
 
+# CORS (important for frontend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,11 +16,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Create DB tables
+
+# Create tables
 Base.metadata.create_all(bind=engine)
 
 # -----------------------------
-# Schema (for validation)
+# Schema
 # -----------------------------
 class TransactionSchema(BaseModel):
     type: str
@@ -29,7 +31,7 @@ class TransactionSchema(BaseModel):
 
 
 # -----------------------------
-# Database Dependency
+# DB Dependency
 # -----------------------------
 def get_db():
     db = SessionLocal()
@@ -40,71 +42,92 @@ def get_db():
 
 
 # -----------------------------
-# POST API (Add Transaction)
+# USER API
+# -----------------------------
+@app.post("/create-user")
+def create_user(name: str, db: Session = Depends(get_db)):
+    user = models.User(name=name)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+# -----------------------------
+# TRANSACTION APIs
 # -----------------------------
 @app.post("/transactions")
-def add_transaction(t: TransactionSchema, db: Session = Depends(get_db)):
-    new_t = models.Transaction(**t.dict())
+def add_transaction(
+    t: TransactionSchema,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    new_t = models.Transaction(**t.dict(), user_id=user_id)
     db.add(new_t)
     db.commit()
     db.refresh(new_t)
     return new_t
 
 
-# -----------------------------
-# GET API (Fetch Transactions)
-# -----------------------------
 @app.get("/transactions")
-def get_transactions(db: Session = Depends(get_db)):
-    return db.query(models.Transaction).all()
+def get_transactions(user_id: int, db: Session = Depends(get_db)):
+    return db.query(models.Transaction).filter(
+        models.Transaction.user_id == user_id
+    ).all()
 
 
+# -----------------------------
+# TOTAL EXPENSE
+# -----------------------------
 @app.get("/total-expense")
-def total_expense(db: Session = Depends(get_db)):
-    transactions = db.query(models.Transaction).all()
+def total_expense(user_id: int, db: Session = Depends(get_db)):
+    transactions = db.query(models.Transaction).filter(
+        models.Transaction.user_id == user_id
+    ).all()
 
     total = sum(t.amount for t in transactions if t.type == "EXPENSE")
-
     return {"total_expense": total}
 
+
+# -----------------------------
+# CATEGORY SUMMARY
+# -----------------------------
 @app.get("/category-summary")
-def category_summary(db: Session = Depends(get_db)):
-    transactions = db.query(models.Transaction).all()
+def category_summary(user_id: int, db: Session = Depends(get_db)):
+    transactions = db.query(models.Transaction).filter(
+        models.Transaction.user_id == user_id
+    ).all()
 
     summary = {}
 
     for t in transactions:
         if t.type == "EXPENSE":
-            if t.category in summary:
-                summary[t.category] += t.amount
-            else:
-                summary[t.category] = t.amount
+            summary[t.category] = summary.get(t.category, 0) + t.amount
 
     return summary
 
+
+# -----------------------------
+# INSIGHTS
+# -----------------------------
 @app.get("/insights")
-def get_insights(db: Session = Depends(get_db)):
-    transactions = db.query(models.Transaction).all()
+def get_insights(user_id: int, db: Session = Depends(get_db)):
+    transactions = db.query(models.Transaction).filter(
+        models.Transaction.user_id == user_id
+    ).all()
 
     total = 0
     category_totals = {}
 
-    # Calculate totals
     for t in transactions:
         if t.type == "EXPENSE":
             total += t.amount
-
-            if t.category in category_totals:
-                category_totals[t.category] += t.amount
-            else:
-                category_totals[t.category] = t.amount
+            category_totals[t.category] = category_totals.get(t.category, 0) + t.amount
 
     insights = []
 
-    # Insight 1: Total spending
     insights.append(f"Total spending is {total}")
 
-    # Insight 2: Highest category
     if category_totals:
         max_category = max(category_totals, key=category_totals.get)
         insights.append(f"You spent most on {max_category}")
@@ -114,18 +137,17 @@ def get_insights(db: Session = Depends(get_db)):
 
     return {"insights": insights}
 
-@app.get("/")
-def home():
-    return {"message": "Budget Tracker API is running"}
 
 # -----------------------------
-# Budget + Prediction API
+# BUDGET STATUS
 # -----------------------------
-MONTHLY_BUDGET = 10000  # you can change this
+MONTHLY_BUDGET = 10000
 
 @app.get("/budget-status")
-def budget_status(db: Session = Depends(get_db)):
-    transactions = db.query(models.Transaction).all()
+def budget_status(user_id: int, db: Session = Depends(get_db)):
+    transactions = db.query(models.Transaction).filter(
+        models.Transaction.user_id == user_id
+    ).all()
 
     total = sum(t.amount for t in transactions if t.type == "EXPENSE")
 
@@ -140,43 +162,47 @@ def budget_status(db: Session = Depends(get_db)):
     }
 
 
+# -----------------------------
+# PREDICTION
+# -----------------------------
 @app.get("/prediction")
-def prediction(db: Session = Depends(get_db)):
-    transactions = db.query(models.Transaction).all()
+def prediction(user_id: int, db: Session = Depends(get_db)):
+    transactions = db.query(models.Transaction).filter(
+        models.Transaction.user_id == user_id
+    ).all()
 
     total = sum(t.amount for t in transactions if t.type == "EXPENSE")
 
-    days_passed = 10  # simple assumption (later dynamic)
+    days_passed = 10  # simple assumption
     if days_passed == 0:
-        return {"prediction": 0}
+        return {"predicted_monthly_spend": 0}
 
     daily_avg = total / days_passed
-    predicted_monthly = daily_avg * 30
+    predicted = daily_avg * 30
 
-    return {
-        "predicted_monthly_spend": round(predicted_monthly, 2)
-    }
+    return {"predicted_monthly_spend": round(predicted, 2)}
 
+
+# -----------------------------
+# ALERTS
+# -----------------------------
 @app.get("/alerts")
-def get_alerts(db: Session = Depends(get_db)):
-    transactions = db.query(models.Transaction).all()
+def get_alerts(user_id: int, db: Session = Depends(get_db)):
+    transactions = db.query(models.Transaction).filter(
+        models.Transaction.user_id == user_id
+    ).all()
 
     alerts = []
 
-    MONTHLY_BUDGET = 10000
-
-    # total expense
     total = sum(t.amount for t in transactions if t.type == "EXPENSE")
 
-    # 1️⃣ Budget exceeded
+    # Budget alerts
     if total > MONTHLY_BUDGET:
-        alerts.append("⚠ You have exceeded your monthly budget!")
-
-    # 2️⃣ Near limit
+        alerts.append("⚠ You exceeded your budget!")
     elif total > 0.8 * MONTHLY_BUDGET:
-        alerts.append("⚠ You are close to your budget limit")
+        alerts.append("⚠ You are near your budget limit")
 
-    # 3️⃣ Category analysis
+    # Category anomaly
     category_totals = {}
     for t in transactions:
         if t.type == "EXPENSE":
@@ -187,8 +213,15 @@ def get_alerts(db: Session = Depends(get_db)):
         if category_totals[max_category] > 0.5 * total:
             alerts.append(f"⚠ High spending in {max_category}")
 
-    # 4️⃣ Default
-    if len(alerts) == 0:
+    if not alerts:
         alerts.append("✅ Spending is under control")
 
     return {"alerts": alerts}
+
+
+# -----------------------------
+# HOME
+# -----------------------------
+@app.get("/")
+def home():
+    return {"message": "Budget Tracker API is running"}

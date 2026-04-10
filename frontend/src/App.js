@@ -8,6 +8,9 @@ function App() {
   const [total, setTotal] = useState(0);
   const [insights, setInsights] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [budget, setBudget] = useState({});
+  const [prediction, setPrediction] = useState(0);
 
   const [form, setForm] = useState({
     type: "EXPENSE",
@@ -38,6 +41,18 @@ function App() {
         }));
         setCategoryData(formatted);
       });
+
+    fetch(`${BASE_URL}/alerts`)
+      .then((res) => res.json())
+      .then((data) => setAlerts(data.alerts));
+
+    fetch(`${BASE_URL}/budget-status`)
+      .then((res) => res.json())
+      .then((data) => setBudget(data));
+
+    fetch(`${BASE_URL}/prediction`)
+      .then((res) => res.json())
+      .then((data) => setPrediction(data.predicted_monthly_spend));
   };
 
   useEffect(() => {
@@ -60,26 +75,21 @@ function App() {
         ...form,
         amount: parseFloat(form.amount),
       }),
-    })
-      .then((res) => res.json())
-      .then(() => {
-        fetchData();
-        setForm({
-          type: "EXPENSE",
-          category: "",
-          amount: "",
-          description: "",
-        });
+    }).then(() => {
+      fetchData();
+      setForm({
+        type: "EXPENSE",
+        category: "",
+        amount: "",
+        description: "",
       });
+    });
   };
 
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <h1 style={styles.title}>💰 Smart Budget Tracker</h1>
-        <p style={styles.subtitle}>
-          Track your expenses and gain insights instantly
-        </p>
+        <h1 style={styles.title}>💰 Budget Tracker</h1>
 
         {/* FORM */}
         <div style={styles.card}>
@@ -92,7 +102,6 @@ function App() {
               value={form.category}
               onChange={handleChange}
             />
-
             <input
               style={styles.input}
               name="amount"
@@ -100,7 +109,6 @@ function App() {
               value={form.amount}
               onChange={handleChange}
             />
-
             <input
               style={styles.input}
               name="description"
@@ -108,87 +116,104 @@ function App() {
               value={form.description}
               onChange={handleChange}
             />
-
-            <button style={styles.button}>Add Transaction</button>
+            <button style={styles.button}>Add</button>
           </form>
         </div>
 
         {/* TOTAL */}
         <div style={styles.card}>
           <h2>Total Expense</h2>
-          <h3 style={styles.total}>₹{total}</h3>
+          <h3 style={{ color: "green" }}>₹{total}</h3>
+        </div>
+
+        {/* BUDGET */}
+        <div style={styles.card}>
+          <h2>Budget Status</h2>
+          <p>Total Budget: ₹{budget.budget}</p>
+          <p>Spent: ₹{budget.spent}</p>
+          <p>Remaining: ₹{budget.remaining}</p>
+          <p>Used: {budget.percentage_used}%</p>
+        </div>
+
+        {/* PREDICTION */}
+        <div style={styles.card}>
+          <h2>Predicted Monthly Spend</h2>
+          <h3 style={{ color: "orange" }}>₹{prediction}</h3>
+        </div>
+
+        {/* ALERTS */}
+        <div style={styles.card}>
+          <h2>Smart Alerts</h2>
+          <ul>
+            {alerts.map((a, index) => (
+              <li
+                key={index}
+                style={{ color: a.includes("⚠") ? "red" : "green" }}
+              >
+                {a}
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* INSIGHTS */}
         <div style={styles.card}>
           <h2>Insights</h2>
-          {insights.length === 0 ? (
-            <p>No insights yet</p>
-          ) : (
-            <ul>
-              {insights.map((i, index) => (
-                <li key={index}>{i}</li>
-              ))}
-            </ul>
-          )}
+          <ul>
+            {insights.map((i, index) => (
+              <li key={index}>{i}</li>
+            ))}
+          </ul>
         </div>
 
         {/* CHART */}
         <div style={styles.card}>
           <h2>Category Chart</h2>
-          {categoryData.length === 0 ? (
-            <p>No data to display</p>
-          ) : (
-            <PieChart width={350} height={300}>
-              <Pie
-                data={categoryData}
-                dataKey="value"
-                nameKey="name"
-                outerRadius={120}
-                label
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell
-                    key={index}
-                    fill={
-                      ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"][
-                        index % 4
-                      ]
-                    }
-                  />
-                ))}
-              </Pie>
-            </PieChart>
-          )}
+          <PieChart width={350} height={300}>
+            <Pie
+              data={categoryData}
+              dataKey="value"
+              nameKey="name"
+              outerRadius={120}
+              fill="#8884d8"
+              label
+            >
+              {categoryData.map((entry, index) => (
+                <Cell
+                  key={index}
+                  fill={
+                    ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"][
+                      index % 4
+                    ]
+                  }
+                />
+              ))}
+            </Pie>
+          </PieChart>
         </div>
 
         {/* TRANSACTIONS */}
         <div style={styles.card}>
           <h2>Transactions</h2>
-          {transactions.length === 0 ? (
-            <p>No transactions yet</p>
-          ) : (
-            <ul>
-              {transactions.map((t) => (
-                <li key={t.id} style={styles.listItem}>
-                  {t.category} - ₹{t.amount} ({t.type})
-                </li>
-              ))}
-            </ul>
-          )}
+          <ul>
+            {transactions.map((t) => (
+              <li key={t.id} style={styles.listItem}>
+                {t.category} - ₹{t.amount} ({t.type})
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
   );
 }
 
-/* 🎨 STYLES */
+/* STYLES */
 const styles = {
   page: {
     background: "#f4f6f8",
     minHeight: "100vh",
     padding: "20px",
-    fontFamily: "Arial, sans-serif",
   },
   container: {
     maxWidth: "700px",
@@ -196,43 +221,32 @@ const styles = {
   },
   title: {
     textAlign: "center",
-    color: "#2c3e50",
-  },
-  subtitle: {
-    textAlign: "center",
-    color: "#7f8c8d",
     marginBottom: "20px",
   },
   card: {
     background: "white",
-    padding: "20px",
+    padding: "15px",
     marginBottom: "20px",
-    borderRadius: "12px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+    borderRadius: "10px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
   },
   input: {
     width: "100%",
-    padding: "12px",
-    marginBottom: "12px",
-    borderRadius: "8px",
-    border: "1px solid #ddd",
+    padding: "10px",
+    marginBottom: "10px",
+    borderRadius: "5px",
+    border: "1px solid #ccc",
   },
   button: {
-    background: "#4CAF50",
+    background: "#007bff",
     color: "white",
-    padding: "12px",
+    padding: "10px",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "5px",
     cursor: "pointer",
-    width: "100%",
-    fontWeight: "bold",
-  },
-  total: {
-    color: "#27ae60",
-    fontSize: "24px",
   },
   listItem: {
-    padding: "8px 0",
+    padding: "5px 0",
     borderBottom: "1px solid #eee",
   },
 };
