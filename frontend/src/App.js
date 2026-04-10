@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell } from "recharts";
 
 const BASE_URL = "https://budget-tracker-zcij.onrender.com";
+const USER_ID = 1;
 
 function App() {
   const [transactions, setTransactions] = useState([]);
@@ -20,19 +21,19 @@ function App() {
   });
 
   const fetchData = () => {
-    fetch(`${BASE_URL}/transactions`)
+    fetch(`${BASE_URL}/transactions?user_id=${USER_ID}`)
       .then((res) => res.json())
       .then((data) => setTransactions(data));
 
-    fetch(`${BASE_URL}/total-expense`)
+    fetch(`${BASE_URL}/total-expense?user_id=${USER_ID}`)
       .then((res) => res.json())
       .then((data) => setTotal(data.total_expense));
 
-    fetch(`${BASE_URL}/insights`)
+    fetch(`${BASE_URL}/insights?user_id=${USER_ID}`)
       .then((res) => res.json())
       .then((data) => setInsights(data.insights));
 
-    fetch(`${BASE_URL}/category-summary`)
+    fetch(`${BASE_URL}/category-summary?user_id=${USER_ID}`)
       .then((res) => res.json())
       .then((data) => {
         const formatted = Object.keys(data).map((key) => ({
@@ -42,15 +43,15 @@ function App() {
         setCategoryData(formatted);
       });
 
-    fetch(`${BASE_URL}/alerts`)
+    fetch(`${BASE_URL}/alerts?user_id=${USER_ID}`)
       .then((res) => res.json())
       .then((data) => setAlerts(data.alerts));
 
-    fetch(`${BASE_URL}/budget-status`)
+    fetch(`${BASE_URL}/budget-status?user_id=${USER_ID}`)
       .then((res) => res.json())
       .then((data) => setBudget(data));
 
-    fetch(`${BASE_URL}/prediction`)
+    fetch(`${BASE_URL}/prediction?user_id=${USER_ID}`)
       .then((res) => res.json())
       .then((data) => setPrediction(data.predicted_monthly_spend));
   };
@@ -66,7 +67,7 @@ function App() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    fetch(`${BASE_URL}/transactions`, {
+    fetch(`${BASE_URL}/transactions?user_id=${USER_ID}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -89,7 +90,7 @@ function App() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <h1 style={styles.title}>💰 Budget Tracker</h1>
+        <h1 style={styles.title}>💰 Smart Budget Tracker</h1>
 
         {/* FORM */}
         <div style={styles.card}>
@@ -175,7 +176,6 @@ function App() {
               dataKey="value"
               nameKey="name"
               outerRadius={120}
-              fill="#8884d8"
               label
             >
               {categoryData.map((entry, index) => (
