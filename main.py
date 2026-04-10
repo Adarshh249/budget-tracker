@@ -156,3 +156,44 @@ def prediction(db: Session = Depends(get_db)):
     return {
         "predicted_monthly_spend": round(predicted_monthly, 2)
     }
+
+# -----------------------------
+# SMART ALERTS API
+# -----------------------------
+@app.get("/alerts")
+def get_alerts(db: Session = Depends(get_db)):
+    transactions = db.query(models.Transaction).all()
+
+    alerts = []
+
+    # total expense
+    total = sum(t.amount for t in transactions if t.type == "EXPENSE")
+
+    MONTHLY_BUDGET = 10000
+
+    # 1️⃣ Budget exceeded
+    if total > MONTHLY_BUDGET:
+        alerts.append("⚠ You have exceeded your monthly budget!")
+
+    # 2️⃣ Budget near limit
+    elif total > 0.8 * MONTHLY_BUDGET:
+        alerts.append("⚠ You are close to your budget limit (80% used)")
+
+    # 3️⃣ Category anomaly detection
+    category_totals = {}
+    for t in transactions:
+        if t.type == "EXPENSE":
+            category_totals[t.category] = category_totals.get(t.category, 0) + t.amount
+
+    if category_totals:
+        max_category = max(category_totals, key=category_totals.get)
+        max_value = category_totals[max_category]
+
+        if max_value > 0.5 * total:
+            alerts.append(f"⚠ High spending detected in {max_category}")
+
+    # 4️⃣ No alerts case
+    if not alerts:
+        alerts.append("✅ Spending is under control")
+
+    return {"alerts": alerts}
