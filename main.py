@@ -117,3 +117,42 @@ def get_insights(db: Session = Depends(get_db)):
 @app.get("/")
 def home():
     return {"message": "Budget Tracker API is running"}
+
+# -----------------------------
+# Budget + Prediction API
+# -----------------------------
+MONTHLY_BUDGET = 10000  # you can change this
+
+@app.get("/budget-status")
+def budget_status(db: Session = Depends(get_db)):
+    transactions = db.query(models.Transaction).all()
+
+    total = sum(t.amount for t in transactions if t.type == "EXPENSE")
+
+    remaining = MONTHLY_BUDGET - total
+    percentage = (total / MONTHLY_BUDGET) * 100 if MONTHLY_BUDGET > 0 else 0
+
+    return {
+        "budget": MONTHLY_BUDGET,
+        "spent": total,
+        "remaining": remaining,
+        "percentage_used": round(percentage, 2)
+    }
+
+
+@app.get("/prediction")
+def prediction(db: Session = Depends(get_db)):
+    transactions = db.query(models.Transaction).all()
+
+    total = sum(t.amount for t in transactions if t.type == "EXPENSE")
+
+    days_passed = 10  # simple assumption (later dynamic)
+    if days_passed == 0:
+        return {"prediction": 0}
+
+    daily_avg = total / days_passed
+    predicted_monthly = daily_avg * 30
+
+    return {
+        "predicted_monthly_spend": round(predicted_monthly, 2)
+    }
