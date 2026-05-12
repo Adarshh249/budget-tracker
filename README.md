@@ -1,42 +1,95 @@
-# 💰 Smart Budget Tracker (AI-Driven)
+# 💰 FinSight AI
 
-## 🌐 Live Demo
-Frontend: https://budget-tracker-iota-roan-88.vercel.app  
-Backend API: https://budget-tracker-zcij.onrender.com/docs  
+## Intelligent Personal Finance Analytics Platform
+
+FinSight AI is a full-stack finance management application developed using React.js and FastAPI. The system helps users track expenses, monitor budgets, analyze spending patterns, and predict future expenses using Machine Learning.
 
 ---
 
-## 🚀 Features
-- Multi-user support (user-specific data)
-- Add & track transactions
+# 🚀 Live Project
+
+### Frontend
+https://budget-tracker-iota-roan-88.vercel.app
+
+### Backend API
+https://budget-tracker-zcij.onrender.com
+
+### API Documentation
+https://budget-tracker-zcij.onrender.com/docs
+
+---
+
+# ✨ Features
+
+- Add and manage expenses
+- Multi-user support
 - Budget monitoring system
-- Smart alerts (overspending detection)
-- Spending prediction (monthly estimation)
-- Category-wise analytics (Pie chart)
-- AI-based insights generation
+- Smart spending alerts
+- Expense prediction using Linear Regression
+- Category-wise analytics
+- Interactive charts and visualization
+- REST API integration
+- Full-stack cloud deployment
 
 ---
 
-## 🧠 Unique Highlights
-- Predicts future expenses based on spending pattern
-- Detects abnormal spending behavior
-- Provides real-time financial alerts
-- Mimics intelligent finance advisor system
+# 🛠️ Technologies Used
+
+## Frontend
+- React.js
+- JavaScript
+- Recharts
+
+## Backend
+- FastAPI
+- Python
+- SQLAlchemy
+
+## Database
+- SQLite
+
+## Machine Learning
+- Scikit-learn
+- Linear Regression
+
+## Deployment
+- GitHub
+- Render
+- Vercel
 
 ---
 
-## 🛠 Tech Stack
-- Frontend: React.js
-- Backend: FastAPI
-- Database: SQLite
-- Deployment: Vercel + Render
+# 🧠 Machine Learning
+
+The project uses the Linear Regression algorithm to predict future expenses based on historical spending data.
 
 ---
 
-## ⚙️ How to Run Locally
+# 📡 Main API Endpoints
 
-```bash
-git clone https://github.com/Adarshh249/budget-tracker.git
-cd frontend
-npm install
-npm start
+| Method | Endpoint |
+|--------|----------|
+| GET | /transactions |
+| POST | /transactions |
+| GET | /total-expense |
+| GET | /category-summary |
+| GET | /insights |
+| GET | /alerts |
+| GET | /budget-status |
+| GET | /prediction |
+
+---
+
+# 🔮 Future Improvements
+
+- JWT Authentication
+- AI Financial Assistant
+- OCR Bill Scanner
+- Voice-based Expense Entry
+
+---
+
+# 👨‍💻 Author
+
+Adarsha P  
+Computer Science Engineering Student

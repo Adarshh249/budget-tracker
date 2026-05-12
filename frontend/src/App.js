@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell } from "recharts";
 
-const BASE_URL = "https://budget-tracker-zcij.onrender.com";
+const BASE_URL = "http://127.0.0.1:8000";
 const USER_ID = 1;
 
 function App() {
@@ -95,8 +95,10 @@ function App() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <h1 style={styles.title}>💰 Smart Budget Tracker</h1>
-
+        <h1 style={styles.title}>💰 FinSight AI</h1>
+         <p style={{ textAlign: "center" }}>
+  Intelligent Personal Finance Analytics Platform
+</p>
         {/* FORM */}
         <div style={styles.card}>
           <h2>Add Transaction</h2>
