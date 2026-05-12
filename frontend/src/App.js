@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell } from "recharts";
 
-const BASE_URL = "http://127.0.0.1:8000";
+const BASE_URL = "https://budget-tracker-zcij.onrender.com";
 const USER_ID = 1;
 
 function App() {
