@@ -2,13 +2,15 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base
-import models
+from sklearn.linear_model import LinearRegression
 from pydantic import BaseModel
+import numpy as np
+import models
 
 # Create app
 app = FastAPI()
 
-# CORS (important for frontend)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,6 +21,10 @@ app.add_middleware(
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+# Monthly budget
+MONTHLY_BUDGET = 10000
+
 
 # -----------------------------
 # Schema
@@ -31,7 +37,7 @@ class TransactionSchema(BaseModel):
 
 
 # -----------------------------
-# DB Dependency
+# Database Dependency
 # -----------------------------
 def get_db():
     db = SessionLocal()
@@ -42,19 +48,21 @@ def get_db():
 
 
 # -----------------------------
-# USER API
+# CREATE USER
 # -----------------------------
 @app.post("/create-user")
 def create_user(name: str, db: Session = Depends(get_db)):
     user = models.User(name=name)
+
     db.add(user)
     db.commit()
     db.refresh(user)
+
     return user
 
 
 # -----------------------------
-# TRANSACTION APIs
+# ADD TRANSACTION
 # -----------------------------
 @app.post("/transactions")
 def add_transaction(
@@ -62,18 +70,28 @@ def add_transaction(
     user_id: int,
     db: Session = Depends(get_db)
 ):
-    new_t = models.Transaction(**t.dict(), user_id=user_id)
-    db.add(new_t)
+    new_transaction = models.Transaction(
+        **t.dict(),
+        user_id=user_id
+    )
+
+    db.add(new_transaction)
     db.commit()
-    db.refresh(new_t)
-    return new_t
+    db.refresh(new_transaction)
+
+    return new_transaction
 
 
+# -----------------------------
+# GET TRANSACTIONS
+# -----------------------------
 @app.get("/transactions")
 def get_transactions(user_id: int, db: Session = Depends(get_db)):
-    return db.query(models.Transaction).filter(
+    transactions = db.query(models.Transaction).filter(
         models.Transaction.user_id == user_id
     ).all()
+
+    return transactions
 
 
 # -----------------------------
@@ -85,8 +103,14 @@ def total_expense(user_id: int, db: Session = Depends(get_db)):
         models.Transaction.user_id == user_id
     ).all()
 
-    total = sum(t.amount for t in transactions if t.type == "EXPENSE")
-    return {"total_expense": total}
+    total = sum(
+        t.amount for t in transactions
+        if t.type == "EXPENSE"
+    )
+
+    return {
+        "total_expense": total
+    }
 
 
 # -----------------------------
@@ -122,37 +146,57 @@ def get_insights(user_id: int, db: Session = Depends(get_db)):
     for t in transactions:
         if t.type == "EXPENSE":
             total += t.amount
-            category_totals[t.category] = category_totals.get(t.category, 0) + t.amount
+            category_totals[t.category] = (
+                category_totals.get(t.category, 0) + t.amount
+            )
 
     insights = []
 
-    insights.append(f"Total spending is {total}")
+    insights.append(f"Total spending is ₹{total}")
 
     if category_totals:
-        max_category = max(category_totals, key=category_totals.get)
-        insights.append(f"You spent most on {max_category}")
+        max_category = max(
+            category_totals,
+            key=category_totals.get
+        )
 
-        percentage = (category_totals[max_category] / total) * 100
-        insights.append(f"{max_category} takes {percentage:.2f}% of your spending")
+        insights.append(
+            f"You spent most on {max_category}"
+        )
 
-    return {"insights": insights}
+        percentage = (
+            category_totals[max_category] / total
+        ) * 100
+
+        insights.append(
+            f"{max_category} takes {percentage:.2f}% of spending"
+        )
+
+    return {
+        "insights": insights
+    }
 
 
 # -----------------------------
 # BUDGET STATUS
 # -----------------------------
-MONTHLY_BUDGET = 10000
-
 @app.get("/budget-status")
 def budget_status(user_id: int, db: Session = Depends(get_db)):
     transactions = db.query(models.Transaction).filter(
         models.Transaction.user_id == user_id
     ).all()
 
-    total = sum(t.amount for t in transactions if t.type == "EXPENSE")
+    total = sum(
+        t.amount for t in transactions
+        if t.type == "EXPENSE"
+    )
 
     remaining = MONTHLY_BUDGET - total
-    percentage = (total / MONTHLY_BUDGET) * 100 if MONTHLY_BUDGET > 0 else 0
+
+    percentage = (
+        (total / MONTHLY_BUDGET) * 100
+        if MONTHLY_BUDGET > 0 else 0
+    )
 
     return {
         "budget": MONTHLY_BUDGET,
@@ -163,7 +207,7 @@ def budget_status(user_id: int, db: Session = Depends(get_db)):
 
 
 # -----------------------------
-# PREDICTION
+# ML PREDICTION
 # -----------------------------
 @app.get("/prediction")
 def prediction(user_id: int, db: Session = Depends(get_db)):
@@ -171,20 +215,49 @@ def prediction(user_id: int, db: Session = Depends(get_db)):
         models.Transaction.user_id == user_id
     ).all()
 
-    total = sum(t.amount for t in transactions if t.type == "EXPENSE")
+    expenses = [
+        t.amount for t in transactions
+        if t.type == "EXPENSE"
+    ]
 
-    days_passed = 10  # simple assumption
-    if days_passed == 0:
-        return {"predicted_monthly_spend": 0}
+    # Need minimum data
+    if len(expenses) < 2:
+        return {
+            "predicted_monthly_spend": 0,
+            "algorithm": "Linear Regression",
+            "message": "Not enough data"
+        }
 
-    daily_avg = total / days_passed
-    predicted = daily_avg * 30
+    # Training data
+    X = np.array(
+        range(len(expenses))
+    ).reshape(-1, 1)
 
-    return {"predicted_monthly_spend": round(predicted, 2)}
+    y = np.array(expenses)
+
+    # Train ML model
+    model = LinearRegression()
+    model.fit(X, y)
+
+    # Predict next expense
+    future_day = np.array([
+        [len(expenses) + 1]
+    ])
+
+    predicted_value = model.predict(
+        future_day
+    )[0]
+
+    return {
+        "predicted_monthly_spend": round(
+            float(predicted_value), 2
+        ),
+        "algorithm": "Linear Regression"
+    }
 
 
 # -----------------------------
-# ALERTS
+# SMART ALERTS
 # -----------------------------
 @app.get("/alerts")
 def get_alerts(user_id: int, db: Session = Depends(get_db)):
@@ -194,29 +267,54 @@ def get_alerts(user_id: int, db: Session = Depends(get_db)):
 
     alerts = []
 
-    total = sum(t.amount for t in transactions if t.type == "EXPENSE")
+    total = sum(
+        t.amount for t in transactions
+        if t.type == "EXPENSE"
+    )
 
     # Budget alerts
     if total > MONTHLY_BUDGET:
-        alerts.append("⚠ You exceeded your budget!")
-    elif total > 0.8 * MONTHLY_BUDGET:
-        alerts.append("⚠ You are near your budget limit")
+        alerts.append(
+            "⚠ You exceeded your monthly budget!"
+        )
 
-    # Category anomaly
+    elif total > 0.8 * MONTHLY_BUDGET:
+        alerts.append(
+            "⚠ You are close to your budget limit"
+        )
+
+    # Category anomaly detection
     category_totals = {}
+
     for t in transactions:
         if t.type == "EXPENSE":
-            category_totals[t.category] = category_totals.get(t.category, 0) + t.amount
+            category_totals[t.category] = (
+                category_totals.get(t.category, 0)
+                + t.amount
+            )
 
     if category_totals:
-        max_category = max(category_totals, key=category_totals.get)
-        if category_totals[max_category] > 0.5 * total:
-            alerts.append(f"⚠ High spending in {max_category}")
+        max_category = max(
+            category_totals,
+            key=category_totals.get
+        )
 
+        max_value = category_totals[max_category]
+
+        if max_value > 0.5 * total:
+            alerts.append(
+                f"⚠ High spending detected in {max_category}"
+            )
+
+    # Default alert
     if not alerts:
-        alerts.append("✅ Spending is under control")
+        alerts.append(
+            "✅ Spending is under control"
+        )
 
-    return {"alerts": alerts}
+    return {
+        "alerts": alerts
+    }
 
 
 # -----------------------------
@@ -224,4 +322,6 @@ def get_alerts(user_id: int, db: Session = Depends(get_db)):
 # -----------------------------
 @app.get("/")
 def home():
-    return {"message": "Budget Tracker API is running"}
+    return {
+        "message": "Smart Budget Tracker API is running"
+    }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell } from "recharts";
 
-const BASE_URL = "https://budget-tracker-zcij.onrender.com";
+const BASE_URL = "http://127.0.0.1:8000";
 const USER_ID = 1;
 
 function App() {
@@ -40,6 +40,7 @@ function App() {
           name: key,
           value: data[key],
         }));
+
         setCategoryData(formatted);
       });
 
@@ -61,7 +62,10 @@ function App() {
   }, []);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSubmit = (e) => {
@@ -78,6 +82,7 @@ function App() {
       }),
     }).then(() => {
       fetchData();
+
       setForm({
         type: "EXPENSE",
         category: "",
@@ -95,6 +100,7 @@ function App() {
         {/* FORM */}
         <div style={styles.card}>
           <h2>Add Transaction</h2>
+
           <form onSubmit={handleSubmit}>
             <input
               style={styles.input}
@@ -103,6 +109,7 @@ function App() {
               value={form.category}
               onChange={handleChange}
             />
+
             <input
               style={styles.input}
               name="amount"
@@ -110,6 +117,7 @@ function App() {
               value={form.amount}
               onChange={handleChange}
             />
+
             <input
               style={styles.input}
               name="description"
@@ -117,19 +125,26 @@ function App() {
               value={form.description}
               onChange={handleChange}
             />
-            <button style={styles.button}>Add</button>
+
+            <button style={styles.button}>
+              Add
+            </button>
           </form>
         </div>
 
         {/* TOTAL */}
         <div style={styles.card}>
           <h2>Total Expense</h2>
-          <h3 style={{ color: "green" }}>₹{total}</h3>
+
+          <h3 style={{ color: "green" }}>
+            ₹{total}
+          </h3>
         </div>
 
         {/* BUDGET */}
         <div style={styles.card}>
           <h2>Budget Status</h2>
+
           <p>Total Budget: ₹{budget.budget}</p>
           <p>Spent: ₹{budget.spent}</p>
           <p>Remaining: ₹{budget.remaining}</p>
@@ -139,17 +154,25 @@ function App() {
         {/* PREDICTION */}
         <div style={styles.card}>
           <h2>Predicted Monthly Spend</h2>
-          <h3 style={{ color: "orange" }}>₹{prediction}</h3>
+
+          <h3 style={{ color: "orange" }}>
+            ₹{prediction}
+          </h3>
         </div>
 
         {/* ALERTS */}
         <div style={styles.card}>
           <h2>Smart Alerts</h2>
+
           <ul>
             {alerts.map((a, index) => (
               <li
                 key={index}
-                style={{ color: a.includes("⚠") ? "red" : "green" }}
+                style={{
+                  color: a.includes("⚠")
+                    ? "red"
+                    : "green",
+                }}
               >
                 {a}
               </li>
@@ -160,6 +183,7 @@ function App() {
         {/* INSIGHTS */}
         <div style={styles.card}>
           <h2>Insights</h2>
+
           <ul>
             {insights.map((i, index) => (
               <li key={index}>{i}</li>
@@ -170,6 +194,7 @@ function App() {
         {/* CHART */}
         <div style={styles.card}>
           <h2>Category Chart</h2>
+
           <PieChart width={350} height={300}>
             <Pie
               data={categoryData}
@@ -182,9 +207,12 @@ function App() {
                 <Cell
                   key={index}
                   fill={
-                    ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"][
-                      index % 4
-                    ]
+                    [
+                      "#0088FE",
+                      "#00C49F",
+                      "#FFBB28",
+                      "#FF8042",
+                    ][index % 4]
                   }
                 />
               ))}
@@ -195,9 +223,13 @@ function App() {
         {/* TRANSACTIONS */}
         <div style={styles.card}>
           <h2>Transactions</h2>
+
           <ul>
             {transactions.map((t) => (
-              <li key={t.id} style={styles.listItem}>
+              <li
+                key={t.id}
+                style={styles.listItem}
+              >
                 {t.category} - ₹{t.amount} ({t.type})
               </li>
             ))}
@@ -215,14 +247,17 @@ const styles = {
     minHeight: "100vh",
     padding: "20px",
   },
+
   container: {
     maxWidth: "700px",
     margin: "auto",
   },
+
   title: {
     textAlign: "center",
     marginBottom: "20px",
   },
+
   card: {
     background: "white",
     padding: "15px",
@@ -230,6 +265,7 @@ const styles = {
     borderRadius: "10px",
     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
   },
+
   input: {
     width: "100%",
     padding: "10px",
@@ -237,6 +273,7 @@ const styles = {
     borderRadius: "5px",
     border: "1px solid #ccc",
   },
+
   button: {
     background: "#007bff",
     color: "white",
@@ -245,6 +282,7 @@ const styles = {
     borderRadius: "5px",
     cursor: "pointer",
   },
+
   listItem: {
     padding: "5px 0",
     borderBottom: "1px solid #eee",
